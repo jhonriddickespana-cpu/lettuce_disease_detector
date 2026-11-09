@@ -6,3 +6,4 @@ supabase
 numpy
 requests
 gunicorn
+pydantic
