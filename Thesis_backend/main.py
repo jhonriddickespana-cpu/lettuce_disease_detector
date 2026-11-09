@@ -1,3 +1,5 @@
+
+import requests
 import os
 import cv2
 import time
@@ -15,6 +17,7 @@ from ultralytics import YOLO
 from pydantic import BaseModel
 from supabase import create_client, Client
 
+API_BASE_URL = "https://lettucediseasedetector-production.up.railway.app"
 # ======================================================================
 # Setup
 # ======================================================================
@@ -137,7 +140,15 @@ def is_exclusive_lettuce(frame, box, conf) -> bool:
     except Exception:
         return True
 
-
+def test_prediction():
+    # Append your endpoint route to the variable
+    url = f"{API_BASE_URL}/predict"
+    
+    with open("sample_lettuce.jpg", "rb") as f:
+        files = {"file": f}
+        response = requests.post(url, files=files)
+        
+    print(response.json())
 def health_label_for(diseased: int) -> str:
     if diseased == 0:
         return "Healthy (100%)"
