@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lettuce Disease Detection Dashboard</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a; color: #f8fafc; padding: 20px; }
+        header { text-align: center; margin-bottom: 25px; }
+        h1 { color: #4ade80; font-size: 2rem; margin-bottom: 8px; }
+
+        .status-bar { display: inline-flex; align-items: center; gap: 8px; background: #1e293b; padding: 6px 16px; border-radius: 20px; font-size: 0.9rem; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; background-color: #ef4444; display: inline-block; }
+        .dot.connected { background-color: #22c55e; }
+
+        .dashboard-grid { display: grid; grid-template-columns: 1fr; gap: 20px; max-width: 1200px; margin: 0 auto; }
+        @media (min-width: 900px) { .dashboard-grid { grid-template-columns: 2fr 1fr; } }
+
+        .card { background: #1e293b; border-radius: 12px; padding: 18px; border: 1px solid #334155; }
+        .card h2 { font-size: 1.2rem; margin-bottom: 15px; color: #cbd5e1; border-bottom: 1px solid #334155; padding-bottom: 8px; }
+
+        .stream-wrapper { position: relative; width: 100%; background: #000; border-radius: 8px; overflow: hidden; min-height: 360px; display: flex; align-items: center; justify-content: center; }
+        .stream-wrapper img { width: 100%; height: auto; display: block; border-radius: 8px; }
+
+        .detection-list { display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto; }
+        .detection-item { display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 12px 16px; border-radius: 8px; border-left: 5px solid #22c55e; }
+        .detection-name { font-weight: 600; text-transform: capitalize; font-size: 1rem; }
+        .detection-conf { font-size: 0.85rem; color: #94a3b8; background: #334155; padding: 4px 8px; border-radius: 4px; }
+        .no-detections { color: #64748b; text-align: center; padding: 20px; font-style: italic; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🥬 Lettuce Disease Live Detector</h1>
+        <div class="status-bar">
+            <span id="statusDot" class="dot"></span>
+            <span id="statusText">ESP32-CAM Disconnected</span>
+        </div>
+    </header>
+
+    <main class="dashboard-grid">
+        <!-- Live Video Stream with YOLO Bounding Boxes -->
+        <section class="card">
+            <h2>Live ESP32-CAM Stream (Annotated)</h2>
+            <div class="stream-wrapper">
+                <img id="videoFeed" src="/video_feed" alt="Live Stream Offline" onerror="handleStreamError()" />
+            </div>
+        </section>
+
+        <!-- Real-Time Disease Detection Metrics -->
+        <section class="card">
+            <h2>Active Detections</h2>
+            <div id="detectionList" class="detection-list">
+                <div class="no-detections">Scanning for disease targets...</div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const detectionList = document.getElementById('detectionList');
+
+        // Check backend and ESP32-CAM connection status every 2 seconds
+        async function checkStatus() {
+            try {
+                const res = await fetch('/status');
+                const data = await res.json();
+                if (data.connected) {
+                    statusDot.classList.add('connected');
+                    statusText.textContent = `Connected to ESP32-CAM (${data.source})`;
+                } else {
+                    statusDot.classList.remove('connected');
+                    statusText.textContent = 'ESP32-CAM Connection Lost (Retrying...)';
+                }
+            } catch (err) {
+                statusDot.classList.remove('connected');
+                statusText.textContent = 'Backend Offline';
+            }
+        }
+
+        // Fetch live detected disease JSON metadata every 500ms
+        async function fetchDetections() {
+            try {
+                const res = await fetch('/detections');
+                const detections = await res.json();
+
+                if (!detections || detections.length === 0) {
+                    detectionList.innerHTML = '<div class="no-detections">No disease detected in current frame.</div>';
+                    return;
+                }
+
+                detectionList.innerHTML = detections.map(item => `
+                    <div class="detection-item" style="border-left-color: ${item.color || '#22c55e'}">
+                        <span class="detection-name">${item.class}</span>
+                        <span class="detection-conf">Confidence: ${(item.confidence * 100).toFixed(1)}%</span>
+                    </div>
+                `).join('');
+            } catch (err) {
+                console.error("Error fetching detections:", err);
+            }
+        }
+
+        function handleStreamError() {
+            statusDot.classList.remove('connected');
+            statusText.textContent = 'Stream Loading Error';
+        }
+
+        setInterval(checkStatus, 2000);
+        setInterval(fetchDetections, 500);
+        checkStatus();
+        fetchDetections();
+    </script>
+</body>
+</html>

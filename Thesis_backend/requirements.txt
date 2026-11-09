@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+supabase
+python-multipart
+Flask
+ultralytics
+opencv-python-headless
+numpy
+requests
+supabase
+gunicorn
