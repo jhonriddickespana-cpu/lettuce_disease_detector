@@ -1,11 +1,7 @@
-fastapi
-uvicorn[standard]
-supabase
-python-multipart
 Flask
 ultralytics
 opencv-python-headless
+supabase
 numpy
 requests
-supabase
 gunicorn
